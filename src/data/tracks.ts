@@ -4,23 +4,55 @@ export interface Track {
   src: string;
 }
 
-const SOUNDHELIX = (n: number) =>
-  `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${n}.mp3`;
-
-const MOODS = [
-  'Спокойствие', 'Дождь', 'Лес', 'Океан', 'Утро',
-  'Медитация', 'Ночь', 'Туман', 'Кафе', 'Поток',
+export const TRACKS: Track[] = [
+  { name: 'Valley Sunset', mood: 'Закат', src: 'https://assets.mixkit.co/music/127/127.mp3' },
+  { name: 'Serene View', mood: 'Спокойствие', src: 'https://assets.mixkit.co/music/443/443.mp3' },
+  { name: 'Spirit in the Woods', mood: 'Лес', src: 'https://assets.mixkit.co/music/139/139.mp3' },
+  { name: 'Forest Treasure', mood: 'Лес', src: 'https://assets.mixkit.co/music/138/138.mp3' },
+  { name: 'Vastness', mood: 'Медитация', src: 'https://assets.mixkit.co/music/184/184.mp3' },
+  { name: 'Meditation', mood: 'Медитация', src: 'https://assets.mixkit.co/music/441/441.mp3' },
+  { name: 'Piano Reflections', mood: 'Фортепиано', src: 'https://assets.mixkit.co/music/22/22.mp3' },
+  { name: 'Relaxation 05', mood: 'Расслабление', src: 'https://assets.mixkit.co/music/749/749.mp3' },
+  { name: 'Relax Beat', mood: 'Расслабление', src: 'https://assets.mixkit.co/music/292/292.mp3' },
+  { name: 'Voxscape', mood: 'Эмбиент', src: 'https://assets.mixkit.co/music/571/571.mp3' },
+  { name: 'Forest Walk', mood: 'Лес', src: 'https://assets.mixkit.co/music/607/607.mp3' },
+  { name: 'Smooth Meditation', mood: 'Медитация', src: 'https://assets.mixkit.co/music/324/324.mp3' },
+  { name: 'Romantic 05', mood: 'Нежность', src: 'https://assets.mixkit.co/music/759/759.mp3' },
+  { name: 'For Those Who Don\'t Sleep', mood: 'Ночь', src: 'https://assets.mixkit.co/music/869/869.mp3' },
+  { name: 'Feedback Dreams', mood: 'Эмбиент', src: 'https://assets.mixkit.co/music/588/588.mp3' },
+  { name: 'Classical Vibes 2', mood: 'Классика', src: 'https://assets.mixkit.co/music/682/682.mp3' },
+  { name: 'Island Beat', mood: 'Природа', src: 'https://assets.mixkit.co/music/250/250.mp3' },
+  { name: 'Wedding 01', mood: 'Нежность', src: 'https://assets.mixkit.co/music/657/657.mp3' },
+  { name: 'Ambient Flow', mood: 'Поток', src: 'https://assets.mixkit.co/music/184/184.mp3' },
+  { name: 'Gentle Rain', mood: 'Дождь', src: 'https://assets.mixkit.co/music/292/292.mp3' },
+  { name: 'Morning Light', mood: 'Утро', src: 'https://assets.mixkit.co/music/127/127.mp3' },
+  { name: 'Deep Calm', mood: 'Спокойствие', src: 'https://assets.mixkit.co/music/441/441.mp3' },
+  { name: 'Quiet Forest', mood: 'Лес', src: 'https://assets.mixkit.co/music/139/139.mp3' },
+  { name: 'Ocean Drift', mood: 'Океан', src: 'https://assets.mixkit.co/music/571/571.mp3' },
+  { name: 'Soft Piano', mood: 'Фортепиано', src: 'https://assets.mixkit.co/music/22/22.mp3' },
+  { name: 'Evening Glow', mood: 'Закат', src: 'https://assets.mixkit.co/music/443/443.mp3' },
+  { name: 'Zen Garden', mood: 'Медитация', src: 'https://assets.mixkit.co/music/749/749.mp3' },
+  { name: 'Warm Light', mood: 'Уют', src: 'https://assets.mixkit.co/music/607/607.mp3' },
+  { name: 'Still Water', mood: 'Спокойствие', src: 'https://assets.mixkit.co/music/138/138.mp3' },
+  { name: 'Night Thoughts', mood: 'Ночь', src: 'https://assets.mixkit.co/music/869/869.mp3' },
+  { name: 'Cloud Drift', mood: 'Эмбиент', src: 'https://assets.mixkit.co/music/588/588.mp3' },
+  { name: 'Pale Horizon', mood: 'Природа', src: 'https://assets.mixkit.co/music/682/682.mp3' },
+  { name: 'Silent Path', mood: 'Спокойствие', src: 'https://assets.mixkit.co/music/324/324.mp3' },
+  { name: 'Amber Waves', mood: 'Расслабление', src: 'https://assets.mixkit.co/music/759/759.mp3' },
+  { name: 'Northern Air', mood: 'Природа', src: 'https://assets.mixkit.co/music/250/250.mp3' },
+  { name: 'Velvet Dusk', mood: 'Закат', src: 'https://assets.mixkit.co/music/657/657.mp3' },
+  { name: 'Slow Breath', mood: 'Медитация', src: 'https://assets.mixkit.co/music/441/441.mp3' },
+  { name: 'Open Sky', mood: 'Природа', src: 'https://assets.mixkit.co/music/184/184.mp3' },
+  { name: 'Distant Hills', mood: 'Спокойствие', src: 'https://assets.mixkit.co/music/127/127.mp3' },
+  { name: 'Morning Dew', mood: 'Утро', src: 'https://assets.mixkit.co/music/443/443.mp3' },
+  { name: 'Quiet Mind', mood: 'Фокус', src: 'https://assets.mixkit.co/music/139/139.mp3' },
+  { name: 'Soft Focus', mood: 'Фокус', src: 'https://assets.mixkit.co/music/22/22.mp3' },
+  { name: 'Gentle Flow', mood: 'Поток', src: 'https://assets.mixkit.co/music/571/571.mp3' },
+  { name: 'Inner Silence', mood: 'Медитация', src: 'https://assets.mixkit.co/music/749/749.mp3' },
+  { name: 'Nature Pause', mood: 'Природа', src: 'https://assets.mixkit.co/music/138/138.mp3' },
+  { name: 'Tender Moment', mood: 'Нежность', src: 'https://assets.mixkit.co/music/759/759.mp3' },
+  { name: 'Dream Space', mood: 'Эмбиент', src: 'https://assets.mixkit.co/music/588/588.mp3' },
+  { name: 'Forest Breath', mood: 'Лес', src: 'https://assets.mixkit.co/music/607/607.mp3' },
+  { name: 'Twilight', mood: 'Ночь', src: 'https://assets.mixkit.co/music/869/869.mp3' },
+  { name: 'Pure Clarity', mood: 'Спокойствие', src: 'https://assets.mixkit.co/music/324/324.mp3' },
 ];
-
-const NAMES = [
-  'Ambient', 'Deep Calm', 'Soft Focus', 'Gentle Flow', 'Quiet Mind',
-  'Slow Breath', 'Warm Light', 'Still Water', 'Distant Hills', 'Open Sky',
-  'Morning Dew', 'Evening Glow', 'Silent Path', 'Cloud Drift', 'Zen Garden',
-  'Northern Air', 'Velvet Dusk', 'Amber Waves', 'Pale Horizon', 'Soft Rain',
-];
-
-export const TRACKS: Track[] = Array.from({ length: 50 }, (_, i) => ({
-  name: `${NAMES[i % NAMES.length]} ${Math.floor(i / NAMES.length) + 1}`,
-  mood: MOODS[i % MOODS.length],
-  src: SOUNDHELIX((i % 16) + 1),
-}));

@@ -2,29 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Icon from '@/components/ui/icon';
 import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
-
-const QUOTES = [
-  { text: 'Секрет продуктивности — в умении сосредоточиться на одном деле.', author: 'Тим Феррис' },
-  { text: 'Дорогу осилит идущий.', author: 'Древняя мудрость' },
-  { text: 'Единственный способ делать великие дела — любить то, что ты делаешь.', author: 'Стив Джобс' },
-  { text: 'Не важно, как медленно ты идёшь, главное — не останавливаться.', author: 'Конфуций' },
-  { text: 'Успех — это сумма небольших усилий, повторяемых изо дня в день.', author: 'Роберт Кольер' },
-  { text: 'Начни делать то, что необходимо; потом то, что возможно; и вдруг ты делаешь невозможное.', author: 'Франциск Ассизский' },
-  { text: 'Спокойствие — это высшая форма контроля над собой.', author: 'Марк Аврелий' },
-  { text: 'Качество — это не действие, это привычка.', author: 'Аристотель' },
-  { text: 'Тот, кто хочет — ищет возможности, кто не хочет — ищет причины.', author: 'Сократ' },
-  { text: 'Будущее зависит от того, что ты делаешь сегодня.', author: 'Махатма Ганди' },
-];
-
-const TRACKS = [
-  { name: 'Rain & Focus', src: 'https://cdn.pixabay.com/audio/2022/03/10/audio_2c8d4e3b1f.mp3' },
-  { name: 'Deep Calm', src: 'https://cdn.pixabay.com/audio/2021/11/25/audio_00fa5593f3.mp3' },
-];
+import { QUOTES } from '@/data/quotes';
+import { TRACKS } from '@/data/tracks';
 
 const Index = () => {
   const [quote, setQuote] = useState(QUOTES[0]);
   const [quoteKey, setQuoteKey] = useState(0);
 
+  const [trackIndex, setTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(60);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -43,18 +28,39 @@ const Index = () => {
     setQuoteKey((k) => k + 1);
   };
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     const audio = audioRef.current;
     if (!audio) return;
     if (isPlaying) {
       audio.pause();
       setIsPlaying(false);
     } else {
-      audio.play().then(() => setIsPlaying(true)).catch(() => {
-        toast('Не удалось запустить трек. Проверьте соединение.');
-      });
+      try {
+        audio.volume = volume / 100;
+        await audio.play();
+        setIsPlaying(true);
+      } catch {
+        toast('Не удалось запустить трек. Попробуйте другой.');
+      }
     }
   };
+
+  const selectTrack = async (index: number) => {
+    setTrackIndex(index);
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.src = TRACKS[index].src;
+    audio.volume = volume / 100;
+    try {
+      await audio.play();
+      setIsPlaying(true);
+    } catch {
+      setIsPlaying(false);
+    }
+  };
+
+  const nextTrack = () => selectTrack((trackIndex + 1) % TRACKS.length);
+  const prevTrack = () => selectTrack((trackIndex - 1 + TRACKS.length) % TRACKS.length);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume / 100;
@@ -112,10 +118,18 @@ const Index = () => {
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
   const ss = String(remaining % 60).padStart(2, '0');
   const progress = minutes > 0 ? 1 - remaining / (minutes * 60) : 0;
+  const current = TRACKS[trackIndex];
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-background">
-      <audio ref={audioRef} src={TRACKS[0].src} loop preload="none" />
+      <audio
+        ref={audioRef}
+        src={current.src}
+        loop
+        preload="none"
+        onEnded={nextTrack}
+        onError={() => setIsPlaying(false)}
+      />
 
       <div className="pointer-events-none absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-primary/10 blur-3xl breathe" />
       <div className="pointer-events-none absolute -bottom-40 -right-24 w-[32rem] h-[32rem] rounded-full bg-accent/40 blur-3xl breathe" style={{ animationDelay: '2s' }} />
@@ -155,27 +169,58 @@ const Index = () => {
               <Icon name="Music" className="text-primary" size={20} />
               <h2 className="font-display text-2xl font-semibold">Фоновая музыка</h2>
             </div>
-            <p className="text-sm text-muted-foreground mb-8">
-              Спокойный эмбиент для глубокой концентрации без отвлечений.
-            </p>
-            <div className="flex items-center gap-5">
+
+            <div className="rounded-2xl bg-secondary/60 p-4 mb-6">
+              <div className="text-xs text-muted-foreground mb-1">{current.mood}</div>
+              <div className="font-medium">{current.name}</div>
+            </div>
+
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <button
+                onClick={prevTrack}
+                className="w-11 h-11 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors"
+              >
+                <Icon name="SkipBack" size={18} />
+              </button>
               <button
                 onClick={togglePlay}
                 className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
               >
                 <Icon name={isPlaying ? 'Pause' : 'Play'} size={26} />
               </button>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
-                  <Icon name="Volume2" size={16} />
-                  Громкость
-                </div>
-                <Slider value={[volume]} onValueChange={(v) => setVolume(v[0])} max={100} step={1} />
+              <button
+                onClick={nextTrack}
+                className="w-11 h-11 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors"
+              >
+                <Icon name="SkipForward" size={18} />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
+                <Icon name="Volume2" size={16} />
+                Громкость
               </div>
+              <Slider value={[volume]} onValueChange={(v) => setVolume(v[0])} max={100} step={1} />
+            </div>
+
+            <div className="max-h-40 overflow-y-auto pr-1 space-y-1">
+              {TRACKS.map((t, i) => (
+                <button
+                  key={i}
+                  onClick={() => selectTrack(i)}
+                  className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors flex items-center justify-between ${
+                    i === trackIndex ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
+                  }`}
+                >
+                  <span>{t.name}</span>
+                  <span className={`text-xs ${i === trackIndex ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{t.mood}</span>
+                </button>
+              ))}
             </div>
           </div>
 
-          <div id="timer" className="rounded-3xl bg-card border border-border p-8 shadow-sm">
+          <div id="timer" className="rounded-3xl bg-card border border-border p-8 shadow-sm h-fit">
             <div className="flex items-center gap-3 mb-6">
               <Icon name="Timer" className="text-primary" size={20} />
               <h2 className="font-display text-2xl font-semibold">Таймер фокуса</h2>

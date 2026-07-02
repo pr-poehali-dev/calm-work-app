@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Icon from '@/components/ui/icon';
 import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
@@ -8,119 +8,165 @@ import { TRACKS } from '@/data/tracks';
 const ALL_MOODS = ['Все', ...Array.from(new Set(TRACKS.map((t) => t.mood)))];
 
 const Index = () => {
-  const [quote, setQuote] = useState(QUOTES[0]);
+  // ─── Quote ───────────────────────────────────────────────
+  const [quote, setQuote] = useState(() => QUOTES[Math.floor(Math.random() * QUOTES.length)]);
   const [quoteKey, setQuoteKey] = useState(0);
-
-  const [moodFilter, setMoodFilter] = useState('Все');
-  const [trackIndex, setTrackIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(60);
-  const audioRef = useRef<HTMLAudioElement>(new Audio());
-
-  const [minutes, setMinutes] = useState(25);
-  const [remaining, setRemaining] = useState(25 * 60);
-  const [running, setRunning] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const filteredTracks = useMemo(
-    () => (moodFilter === 'Все' ? TRACKS : TRACKS.filter((t) => t.mood === moodFilter)),
-    [moodFilter]
-  );
-
-  useEffect(() => {
-    setQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
-    const audio = audioRef.current;
-    audio.loop = true;
-    audio.volume = 0.6;
-    audio.src = TRACKS[0].src;
-    return () => { audio.pause(); };
-  }, []);
-
-  useEffect(() => {
-    audioRef.current.volume = volume / 100;
-  }, [volume]);
 
   const newQuote = () => {
     setQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
     setQuoteKey((k) => k + 1);
   };
 
-  const playTrack = useCallback(async (globalIndex: number) => {
-    const audio = audioRef.current;
-    setTrackIndex(globalIndex);
-    audio.pause();
-    audio.src = TRACKS[globalIndex].src;
-    audio.load();
-    try {
-      await audio.play();
-      setIsPlaying(true);
-    } catch {
+  // ─── Player ───────────────────────────────────────────────
+  const [moodFilter, setMoodFilter] = useState('Все');
+  const [trackIndex, setTrackIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(60);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Один стабильный Audio объект на весь жизненный цикл страницы
+  const audio = useRef<HTMLAudioElement | null>(null);
+  // Храним индекс в ref чтобы колбэки не устаревали
+  const trackIndexRef = useRef(0);
+
+  useEffect(() => {
+    const a = new Audio();
+    a.loop = false;
+    a.volume = volume / 100;
+    a.preload = 'auto';
+    audio.current = a;
+
+    const onTimeUpdate = () => setCurrentTime(a.currentTime);
+    const onDurationChange = () => setDuration(a.duration || 0);
+    const onEnded = () => {
+      const next = (trackIndexRef.current + 1) % TRACKS.length;
+      loadAndPlay(next);
+    };
+    const onError = () => {
       setIsPlaying(false);
-      toast('Не удалось воспроизвести трек — попробуйте другой.');
-    }
+      setIsLoading(false);
+    };
+    const onCanPlay = () => setIsLoading(false);
+    const onWaiting = () => setIsLoading(true);
+
+    a.addEventListener('timeupdate', onTimeUpdate);
+    a.addEventListener('durationchange', onDurationChange);
+    a.addEventListener('ended', onEnded);
+    a.addEventListener('error', onError);
+    a.addEventListener('canplay', onCanPlay);
+    a.addEventListener('waiting', onWaiting);
+
+    // Предзагружаем первый трек сразу
+    a.src = TRACKS[0].src;
+    a.load();
+
+    return () => {
+      a.pause();
+      a.src = '';
+      a.removeEventListener('timeupdate', onTimeUpdate);
+      a.removeEventListener('durationchange', onDurationChange);
+      a.removeEventListener('ended', onEnded);
+      a.removeEventListener('error', onError);
+      a.removeEventListener('canplay', onCanPlay);
+      a.removeEventListener('waiting', onWaiting);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const togglePlay = async () => {
-    const audio = audioRef.current;
+  useEffect(() => {
+    if (audio.current) audio.current.volume = volume / 100;
+  }, [volume]);
+
+  const loadAndPlay = (index: number) => {
+    const a = audio.current;
+    if (!a) return;
+    trackIndexRef.current = index;
+    setTrackIndex(index);
+    setCurrentTime(0);
+    setDuration(0);
+    setIsLoading(true);
+    a.pause();
+    a.src = TRACKS[index].src;
+    a.load();
+    const tryPlay = () => {
+      a.play()
+        .then(() => { setIsPlaying(true); setIsLoading(false); })
+        .catch(() => { setIsPlaying(false); setIsLoading(false); });
+      a.removeEventListener('canplay', tryPlay);
+    };
+    a.addEventListener('canplay', tryPlay);
+  };
+
+  const togglePlay = () => {
+    const a = audio.current;
+    if (!a) return;
     if (isPlaying) {
-      audio.pause();
+      a.pause();
       setIsPlaying(false);
     } else {
-      if (!audio.src || audio.src === window.location.href) {
-        audio.src = TRACKS[trackIndex].src;
-        audio.load();
+      // Если src ещё не загружен — загружаем
+      if (!a.src || a.src === window.location.href) {
+        a.src = TRACKS[trackIndex].src;
+        a.load();
       }
-      try {
-        await audio.play();
-        setIsPlaying(true);
-      } catch {
-        toast('Нажмите ещё раз — браузер требует взаимодействия.');
-      }
+      a.play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {
+          // Второй попытки обычно достаточно после взаимодействия
+          setTimeout(() => {
+            a.play().then(() => setIsPlaying(true)).catch(() => {
+              toast('Не удалось запустить трек — попробуйте другой.');
+            });
+          }, 100);
+        });
     }
   };
 
-  const nextTrack = useCallback(() => {
-    const nextIndex = (trackIndex + 1) % TRACKS.length;
-    playTrack(nextIndex);
-  }, [trackIndex, playTrack]);
+  const seekTo = (value: number[]) => {
+    const a = audio.current;
+    if (!a || !duration) return;
+    a.currentTime = value[0];
+    setCurrentTime(value[0]);
+  };
 
-  const prevTrack = useCallback(() => {
-    const prevIndex = (trackIndex - 1 + TRACKS.length) % TRACKS.length;
-    playTrack(prevIndex);
-  }, [trackIndex, playTrack]);
+  const filteredTracks = useMemo(
+    () => (moodFilter === 'Все' ? TRACKS : TRACKS.filter((t) => t.mood === moodFilter)),
+    [moodFilter]
+  );
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    const handleEnded = () => nextTrack();
-    const handleError = () => setIsPlaying(false);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('error', handleError);
-    return () => {
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('error', handleError);
-    };
-  }, [nextTrack]);
+  const formatTime = (s: number) => {
+    if (!s || isNaN(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
 
-  const finishTimer = useCallback(() => {
-    setRunning(false);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    toast('Время вышло! Сделайте небольшой перерыв.', { icon: '🌿' });
-    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      new Notification('Сессия завершена', { body: 'Отличная работа. Пора отдохнуть.' });
-    }
-  }, []);
+  // ─── Timer ────────────────────────────────────────────────
+  const [minutes, setMinutes] = useState(25);
+  const [remaining, setRemaining] = useState(25 * 60);
+  const [running, setRunning] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (running) {
       intervalRef.current = setInterval(() => {
         setRemaining((r) => {
-          if (r <= 1) { finishTimer(); return 0; }
+          if (r <= 1) {
+            setRunning(false);
+            toast('Время вышло! Сделайте небольшой перерыв.', { icon: '🌿' });
+            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+              new Notification('Сессия завершена', { body: 'Отличная работа. Пора отдохнуть.' });
+            }
+            return 0;
+          }
           return r - 1;
         });
       }, 1000);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [running, finishTimer]);
+  }, [running]);
 
   const startTimer = () => {
     if (running) { setRunning(false); return; }
@@ -141,7 +187,7 @@ const Index = () => {
 
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
   const ss = String(remaining % 60).padStart(2, '0');
-  const progress = minutes > 0 ? 1 - remaining / (minutes * 60) : 0;
+  const timerProgress = minutes > 0 ? 1 - remaining / (minutes * 60) : 0;
   const current = TRACKS[trackIndex];
 
   return (
@@ -150,6 +196,7 @@ const Index = () => {
       <div className="pointer-events-none absolute -bottom-40 -right-24 w-[32rem] h-[32rem] rounded-full bg-accent/40 blur-3xl breathe" style={{ animationDelay: '2s' }} />
 
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-10">
+        {/* Header */}
         <header className="flex items-center justify-between mb-16">
           <div className="flex items-center gap-2">
             <Icon name="Leaf" className="text-primary" size={22} />
@@ -161,6 +208,7 @@ const Index = () => {
           </nav>
         </header>
 
+        {/* Quote */}
         <section className="text-center max-w-3xl mx-auto mb-20">
           <p className="uppercase tracking-[0.35em] text-xs text-muted-foreground mb-8">Мысль дня</p>
           <blockquote key={quoteKey} className="animate-fade-in">
@@ -169,10 +217,7 @@ const Index = () => {
             </p>
             <footer className="text-muted-foreground text-lg">— {quote.author}</footer>
           </blockquote>
-          <button
-            onClick={newQuote}
-            className="mt-8 inline-flex items-center gap-2 text-sm text-primary hover:opacity-70 transition-opacity"
-          >
+          <button onClick={newQuote} className="mt-8 inline-flex items-center gap-2 text-sm text-primary hover:opacity-70 transition-opacity">
             <Icon name="RefreshCw" size={15} />
             Другая цитата
           </button>
@@ -186,26 +231,51 @@ const Index = () => {
               <h2 className="font-display text-2xl font-semibold">Фоновая музыка</h2>
             </div>
 
-            {/* Current track */}
+            {/* Current track info */}
             <div className="rounded-2xl bg-secondary/60 p-4 mb-5">
               <div className="text-xs text-muted-foreground mb-1">{current.mood}</div>
-              <div className="font-medium">{current.name}</div>
+              <div className="font-medium truncate">{current.name}</div>
             </div>
 
             {/* Controls */}
-            <div className="flex items-center justify-center gap-4 mb-5">
-              <button onClick={prevTrack} className="w-11 h-11 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <button
+                onClick={() => loadAndPlay((trackIndex - 1 + TRACKS.length) % TRACKS.length)}
+                className="w-11 h-11 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors"
+              >
                 <Icon name="SkipBack" size={18} />
               </button>
               <button
                 onClick={togglePlay}
-                className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
+                disabled={isLoading}
+                className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 transition-transform shadow-lg disabled:opacity-60"
               >
-                <Icon name={isPlaying ? 'Pause' : 'Play'} size={26} />
+                {isLoading
+                  ? <Icon name="Loader" size={24} className="animate-spin" />
+                  : <Icon name={isPlaying ? 'Pause' : 'Play'} size={26} />
+                }
               </button>
-              <button onClick={nextTrack} className="w-11 h-11 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
+              <button
+                onClick={() => loadAndPlay((trackIndex + 1) % TRACKS.length)}
+                className="w-11 h-11 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors"
+              >
                 <Icon name="SkipForward" size={18} />
               </button>
+            </div>
+
+            {/* Seek bar */}
+            <div className="mb-5">
+              <Slider
+                value={[currentTime]}
+                max={duration || 1}
+                step={1}
+                onValueChange={seekTo}
+                className="mb-1"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration)}</span>
+              </div>
             </div>
 
             {/* Volume */}
@@ -237,17 +307,17 @@ const Index = () => {
             {/* Track list */}
             <div className="max-h-36 overflow-y-auto pr-1 space-y-1">
               {filteredTracks.map((t) => {
-                const globalIndex = TRACKS.indexOf(t);
+                const gi = TRACKS.indexOf(t);
                 return (
                   <button
-                    key={globalIndex}
-                    onClick={() => playTrack(globalIndex)}
+                    key={gi}
+                    onClick={() => loadAndPlay(gi)}
                     className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors flex items-center justify-between ${
-                      globalIndex === trackIndex ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
+                      gi === trackIndex ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
                     }`}
                   >
-                    <span>{t.name}</span>
-                    <span className={`text-xs ${globalIndex === trackIndex ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                    <span className="truncate mr-2">{t.name}</span>
+                    <span className={`text-xs shrink-0 ${gi === trackIndex ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                       {t.mood}
                     </span>
                   </button>
@@ -277,7 +347,7 @@ const Index = () => {
             </div>
 
             <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden mb-8">
-              <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${progress * 100}%` }} />
+              <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${timerProgress * 100}%` }} />
             </div>
 
             <div className="flex gap-3">

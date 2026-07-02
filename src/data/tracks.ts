@@ -8,7 +8,6 @@ const PIANO   = 'https://archive.org/download/solo-piano-7/';
 const AMBIENT = 'https://archive.org/download/AmbientSoundbathPodcast/';
 const FOREST  = 'https://archive.org/download/EastForest-TheEducationOfTheIndividualSoul/';
 const MINDFUL = 'https://archive.org/download/audiorezout-mindfulness/';
-const WORKOUT = 'https://archive.org/download/carlin-264-danceworkoutambient/';
 const WRKOUT2 = 'https://archive.org/download/oo_feelingsuperbetterworkout/';
 
 export const TRACKS: Track[] = [
@@ -61,21 +60,21 @@ export const TRACKS: Track[] = [
   { name: 'Звуковая ванна XIV',  mood: 'Медитация', src: AMBIENT + 'AmbientSoundbathPodcast-014.mp3' },
   { name: 'Звуковая ванна XV',   mood: 'Медитация', src: AMBIENT + 'AmbientSoundbathPodcast-015.mp3' },
 
-  // ── Тренировка ── энергичная dance/workout музыка
-  { name: 'Держись',              mood: 'Тренировка', src: WORKOUT + '01 - Steve Johnson & Chris Slack - Hold on to You.mp3' },
-  { name: 'Отражение',            mood: 'Тренировка', src: WORKOUT + '02 - Steve Johnson & Chris Slack - Mirror Image.mp3' },
-  { name: 'Максимизатор',         mood: 'Тренировка', src: WORKOUT + '03 - Steve Johnson & Chris Slack - Maximizer.mp3' },
-  { name: 'Латинская нотка',      mood: 'Тренировка', src: WORKOUT + '04 - Gary Moberley & John Gould - Latino Spice.mp3' },
-  { name: 'Ки-Уэст',              mood: 'Тренировка', src: WORKOUT + '05 - Gary Moberley & John Gould - Key West.mp3' },
-  { name: 'Текко',                mood: 'Тренировка', src: WORKOUT + '06 - Gary Moberley & John Gould - Tekco.mp3' },
-  { name: 'Почувствуй это',       mood: 'Тренировка', src: WORKOUT + '07 - Gary Moberley & John Gould - Feel It.mp3' },
-  { name: 'Синкопатор',           mood: 'Тренировка', src: WORKOUT + '08 - Steve Johnson & Chris Slack - Syncopator.mp3' },
-  { name: 'Евробэби',             mood: 'Тренировка', src: WORKOUT + '09 - Steve Johnson & Chris Slack - Eurobaby.mp3' },
-  { name: 'Трип-хоп',             mood: 'Тренировка', src: WORKOUT + '10 - Steve Johnson & Chris Slack - Trip Hop.mp3' },
-  { name: 'Циклотрон',            mood: 'Тренировка', src: WORKOUT + '11 - Steve Johnson & Chris Slack - Cyclotron.mp3' },
-  { name: 'Химия',                mood: 'Тренировка', src: WORKOUT + '12 - Steve Johnson & Chris Slack - Chemical.mp3' },
-  { name: 'В потоке',             mood: 'Тренировка', src: WRKOUT2 + '04_-_steady_reps_-_northbound_-_forward.mp3' },
+  // ── Тренировка ── специализированный workout-микс (steady + high intensity)
+  { name: 'Послесловие',          mood: 'Тренировка', src: WRKOUT2 + '01_-_steady_reps_-_yacht_-_the_afterlife_(instrumental).mp3' },
+  { name: 'Принцесса потеряна',   mood: 'Тренировка', src: WRKOUT2 + '02_-_steady_reps_-_laguna_-_la_princesa_perdida.mp3' },
+  { name: 'Блюз настроения',      mood: 'Тренировка', src: WRKOUT2 + '03_-_steady_reps_-_mr._moods_-_i_got_the_blues.mp3' },
+  { name: 'Вперёд',               mood: 'Тренировка', src: WRKOUT2 + '04_-_steady_reps_-_northbound_-_forward.mp3' },
+  { name: 'Держи ритм',           mood: 'Тренировка', src: WRKOUT2 + '05_-_steady_reps_-_player_two_-_keep_sit_real.mp3' },
+  { name: 'Неудержимый позитив',  mood: 'Тренировка', src: WRKOUT2 + '06_-_steady_reps_-_spinnaface_-_relentless_positivity.mp3' },
+  { name: 'Кег бейсбол',          mood: 'Тренировка', src: WRKOUT2 + '07_-_steady_reps_-_centz_-_keg_baseball.mp3' },
+  { name: 'Ник и палка',          mood: 'Тренировка', src: WRKOUT2 + '08_-_steady_reps_-_citizen_crane_-_nick_the_stick.mp3' },
   { name: 'Танцующий тигр',       mood: 'Тренировка', src: WRKOUT2 + '09_-_steady_reps_-_damscray_-_dancing_tiger.mp3' },
-  { name: 'Высокая интенсивность',mood: 'Тренировка', src: WRKOUT2 + '11_-_high_intensity_reps_-_anitek_-_blueprint.mp3' },
+  { name: 'Монго Бонго',          mood: 'Тренировка', src: WRKOUT2 + '10_-_steady_reps_-_krackatoa_-_mongo_bongo.mp3' },
+  { name: 'Схема',                mood: 'Тренировка', src: WRKOUT2 + '11_-_high_intensity_reps_-_anitek_-_blueprint.mp3' },
+  { name: 'Вишнёвое дерево',      mood: 'Тренировка', src: WRKOUT2 + '12_-_high_intensity_reps_-_burning_bright_-_the_cherry_tree.mp3' },
+  { name: 'Скрутка и наука',      mood: 'Тренировка', src: WRKOUT2 + '13_-_high_intensity_reps_-_damscray_-_twist_and_science.mp3' },
+  { name: 'Простые удовольствия', mood: 'Тренировка', src: WRKOUT2 + '14_-_high_intensity_reps_-_henry_homesweet_-_simple_pleasures.mp3' },
+  { name: 'Реймонд Скотт',        mood: 'Тренировка', src: WRKOUT2 + '15_-_high_intensity_reps_-_junior85_-_raymond_scott.mp3' },
   { name: 'Идеальное завтра',     mood: 'Тренировка', src: WRKOUT2 + '16_-_high_intensity_reps_-_mokhov_-_perfect_tomorrow.mp3' },
 ];

@@ -5,7 +5,13 @@ import { toast } from 'sonner';
 import { QUOTES } from '@/data/quotes';
 import { TRACKS } from '@/data/tracks';
 
-const ALL_MOODS = ['Все', ...Array.from(new Set(TRACKS.map((t) => t.mood)))];
+const CATEGORIES = [
+  { label: 'Все',        icon: 'LayoutGrid' },
+  { label: 'Работа',     icon: 'BriefcaseBusiness' },
+  { label: 'Прогулка',   icon: 'Footprints' },
+  { label: 'Медитация',  icon: 'Flower2' },
+  { label: 'Тренировка', icon: 'Dumbbell' },
+] as const;
 
 const Index = () => {
   // ─── Quote ───────────────────────────────────────────────
@@ -287,19 +293,20 @@ const Index = () => {
               <Slider value={[volume]} onValueChange={(v) => setVolume(v[0])} max={100} step={1} />
             </div>
 
-            {/* Mood filter */}
+            {/* Category filter */}
             <div className="flex flex-wrap gap-1.5 mb-3">
-              {ALL_MOODS.map((mood) => (
+              {CATEGORIES.map(({ label, icon }) => (
                 <button
-                  key={mood}
-                  onClick={() => setMoodFilter(mood)}
-                  className={`px-3 py-1 rounded-full text-xs transition-colors ${
-                    moodFilter === mood
+                  key={label}
+                  onClick={() => setMoodFilter(label)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    moodFilter === label
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-secondary hover:bg-secondary/80 text-foreground'
                   }`}
                 >
-                  {mood}
+                  <Icon name={icon} size={12} />
+                  {label}
                 </button>
               ))}
             </div>

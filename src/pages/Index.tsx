@@ -1,70 +1,105 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Icon from '@/components/ui/icon';
 import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
 import { QUOTES } from '@/data/quotes';
 import { TRACKS } from '@/data/tracks';
 
+const ALL_MOODS = ['Все', ...Array.from(new Set(TRACKS.map((t) => t.mood)))];
+
 const Index = () => {
   const [quote, setQuote] = useState(QUOTES[0]);
   const [quoteKey, setQuoteKey] = useState(0);
 
+  const [moodFilter, setMoodFilter] = useState('Все');
   const [trackIndex, setTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(60);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(new Audio());
 
   const [minutes, setMinutes] = useState(25);
   const [remaining, setRemaining] = useState(25 * 60);
   const [running, setRunning] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const filteredTracks = useMemo(
+    () => (moodFilter === 'Все' ? TRACKS : TRACKS.filter((t) => t.mood === moodFilter)),
+    [moodFilter]
+  );
+
   useEffect(() => {
     setQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
+    const audio = audioRef.current;
+    audio.loop = true;
+    audio.volume = 0.6;
+    audio.src = TRACKS[0].src;
+    return () => { audio.pause(); };
   }, []);
+
+  useEffect(() => {
+    audioRef.current.volume = volume / 100;
+  }, [volume]);
 
   const newQuote = () => {
     setQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
     setQuoteKey((k) => k + 1);
   };
 
-  const togglePlay = async () => {
+  const playTrack = useCallback(async (globalIndex: number) => {
     const audio = audioRef.current;
-    if (!audio) return;
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-    } else {
-      try {
-        audio.volume = volume / 100;
-        await audio.play();
-        setIsPlaying(true);
-      } catch {
-        toast('Не удалось запустить трек. Попробуйте другой.');
-      }
-    }
-  };
-
-  const selectTrack = async (index: number) => {
-    setTrackIndex(index);
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.src = TRACKS[index].src;
-    audio.volume = volume / 100;
+    setTrackIndex(globalIndex);
+    audio.pause();
+    audio.src = TRACKS[globalIndex].src;
+    audio.load();
     try {
       await audio.play();
       setIsPlaying(true);
     } catch {
       setIsPlaying(false);
+      toast('Не удалось воспроизвести трек — попробуйте другой.');
+    }
+  }, []);
+
+  const togglePlay = async () => {
+    const audio = audioRef.current;
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+    } else {
+      if (!audio.src || audio.src === window.location.href) {
+        audio.src = TRACKS[trackIndex].src;
+        audio.load();
+      }
+      try {
+        await audio.play();
+        setIsPlaying(true);
+      } catch {
+        toast('Нажмите ещё раз — браузер требует взаимодействия.');
+      }
     }
   };
 
-  const nextTrack = () => selectTrack((trackIndex + 1) % TRACKS.length);
-  const prevTrack = () => selectTrack((trackIndex - 1 + TRACKS.length) % TRACKS.length);
+  const nextTrack = useCallback(() => {
+    const nextIndex = (trackIndex + 1) % TRACKS.length;
+    playTrack(nextIndex);
+  }, [trackIndex, playTrack]);
+
+  const prevTrack = useCallback(() => {
+    const prevIndex = (trackIndex - 1 + TRACKS.length) % TRACKS.length;
+    playTrack(prevIndex);
+  }, [trackIndex, playTrack]);
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume / 100;
-  }, [volume]);
+    const audio = audioRef.current;
+    const handleEnded = () => nextTrack();
+    const handleError = () => setIsPlaying(false);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
+    };
+  }, [nextTrack]);
 
   const finishTimer = useCallback(() => {
     setRunning(false);
@@ -79,24 +114,16 @@ const Index = () => {
     if (running) {
       intervalRef.current = setInterval(() => {
         setRemaining((r) => {
-          if (r <= 1) {
-            finishTimer();
-            return 0;
-          }
+          if (r <= 1) { finishTimer(); return 0; }
           return r - 1;
         });
       }, 1000);
     }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [running, finishTimer]);
 
   const startTimer = () => {
-    if (running) {
-      setRunning(false);
-      return;
-    }
+    if (running) { setRunning(false); return; }
     if (remaining === 0) setRemaining(minutes * 60);
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission();
@@ -104,10 +131,7 @@ const Index = () => {
     setRunning(true);
   };
 
-  const resetTimer = () => {
-    setRunning(false);
-    setRemaining(minutes * 60);
-  };
+  const resetTimer = () => { setRunning(false); setRemaining(minutes * 60); };
 
   const changeMinutes = (delta: number) => {
     const next = Math.min(120, Math.max(5, minutes + delta));
@@ -122,15 +146,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-background">
-      <audio
-        ref={audioRef}
-        src={current.src}
-        loop
-        preload="none"
-        onEnded={nextTrack}
-        onError={() => setIsPlaying(false)}
-      />
-
       <div className="pointer-events-none absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-primary/10 blur-3xl breathe" />
       <div className="pointer-events-none absolute -bottom-40 -right-24 w-[32rem] h-[32rem] rounded-full bg-accent/40 blur-3xl breathe" style={{ animationDelay: '2s' }} />
 
@@ -164,22 +179,22 @@ const Index = () => {
         </section>
 
         <div className="grid md:grid-cols-2 gap-6">
+          {/* PLAYER */}
           <div id="player" className="rounded-3xl bg-card border border-border p-8 shadow-sm">
             <div className="flex items-center gap-3 mb-6">
               <Icon name="Music" className="text-primary" size={20} />
               <h2 className="font-display text-2xl font-semibold">Фоновая музыка</h2>
             </div>
 
-            <div className="rounded-2xl bg-secondary/60 p-4 mb-6">
+            {/* Current track */}
+            <div className="rounded-2xl bg-secondary/60 p-4 mb-5">
               <div className="text-xs text-muted-foreground mb-1">{current.mood}</div>
               <div className="font-medium">{current.name}</div>
             </div>
 
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <button
-                onClick={prevTrack}
-                className="w-11 h-11 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-              >
+            {/* Controls */}
+            <div className="flex items-center justify-center gap-4 mb-5">
+              <button onClick={prevTrack} className="w-11 h-11 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
                 <Icon name="SkipBack" size={18} />
               </button>
               <button
@@ -188,15 +203,13 @@ const Index = () => {
               >
                 <Icon name={isPlaying ? 'Pause' : 'Play'} size={26} />
               </button>
-              <button
-                onClick={nextTrack}
-                className="w-11 h-11 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-              >
+              <button onClick={nextTrack} className="w-11 h-11 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
                 <Icon name="SkipForward" size={18} />
               </button>
             </div>
 
-            <div className="mb-6">
+            {/* Volume */}
+            <div className="mb-5">
               <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
                 <Icon name="Volume2" size={16} />
                 Громкость
@@ -204,22 +217,46 @@ const Index = () => {
               <Slider value={[volume]} onValueChange={(v) => setVolume(v[0])} max={100} step={1} />
             </div>
 
-            <div className="max-h-40 overflow-y-auto pr-1 space-y-1">
-              {TRACKS.map((t, i) => (
+            {/* Mood filter */}
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {ALL_MOODS.map((mood) => (
                 <button
-                  key={i}
-                  onClick={() => selectTrack(i)}
-                  className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors flex items-center justify-between ${
-                    i === trackIndex ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
+                  key={mood}
+                  onClick={() => setMoodFilter(mood)}
+                  className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                    moodFilter === mood
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary hover:bg-secondary/80 text-foreground'
                   }`}
                 >
-                  <span>{t.name}</span>
-                  <span className={`text-xs ${i === trackIndex ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{t.mood}</span>
+                  {mood}
                 </button>
               ))}
             </div>
+
+            {/* Track list */}
+            <div className="max-h-36 overflow-y-auto pr-1 space-y-1">
+              {filteredTracks.map((t) => {
+                const globalIndex = TRACKS.indexOf(t);
+                return (
+                  <button
+                    key={globalIndex}
+                    onClick={() => playTrack(globalIndex)}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors flex items-center justify-between ${
+                      globalIndex === trackIndex ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
+                    }`}
+                  >
+                    <span>{t.name}</span>
+                    <span className={`text-xs ${globalIndex === trackIndex ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                      {t.mood}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
+          {/* TIMER */}
           <div id="timer" className="rounded-3xl bg-card border border-border p-8 shadow-sm h-fit">
             <div className="flex items-center gap-3 mb-6">
               <Icon name="Timer" className="text-primary" size={20} />
@@ -227,20 +264,14 @@ const Index = () => {
             </div>
 
             <div className="flex items-center justify-center gap-6 mb-6">
-              <button
-                onClick={() => changeMinutes(-5)}
-                className="w-10 h-10 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-              >
+              <button onClick={() => changeMinutes(-5)} className="w-10 h-10 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
                 <Icon name="Minus" size={18} />
               </button>
               <div className="text-center">
                 <div className="font-display text-6xl font-semibold tabular-nums">{mm}:{ss}</div>
                 <div className="text-xs text-muted-foreground mt-1">шаг 5 минут</div>
               </div>
-              <button
-                onClick={() => changeMinutes(5)}
-                className="w-10 h-10 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-              >
+              <button onClick={() => changeMinutes(5)} className="w-10 h-10 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
                 <Icon name="Plus" size={18} />
               </button>
             </div>
@@ -257,10 +288,7 @@ const Index = () => {
                 <Icon name={running ? 'Pause' : 'Play'} size={18} />
                 {running ? 'Пауза' : 'Начать'}
               </button>
-              <button
-                onClick={resetTimer}
-                className="w-12 h-12 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-              >
+              <button onClick={resetTimer} className="w-12 h-12 rounded-full border border-border flex items-center justify-center hover:bg-secondary transition-colors">
                 <Icon name="RotateCcw" size={18} />
               </button>
             </div>
